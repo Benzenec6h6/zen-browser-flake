@@ -52,6 +52,15 @@
         
         echo "Source root explicitly set to: $sourceRoot"
         
+        # *** 新しく追加するデバッグコード ***
+        echo "--- Listing files in source/ directory ---"
+        ls -RF source/
+        echo "-----------------------------------------"
+        echo "--- Listing files in source/zen/ directory ---"
+        ls -RF source/zen/
+        echo "----------------------------------------------"
+        # *** デバッグコードここまで ***
+
         runHook postUnpack
       '';
 
