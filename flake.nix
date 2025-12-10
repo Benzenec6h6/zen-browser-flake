@@ -1,102 +1,101 @@
 {
-  description = "Zen Browser Release (auto-update flake)";
+  description = "Zen Browser Release (nvfetcher auto-update)";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
   };
 
-  outputs = { self, nixpkgs }: let
-    system = "x86_64-linux";
+  outputs = { self, nixpkgs, ... }:
+  let
+    systems = [ "x86_64-linux" "aarch64-linux" ];
 
-    pkgs = import nixpkgs { 
-      inherit system; 
-      config.allowUnfree = true;
-    };
-
-    zenSrc = import ./_sources/generated.nix {
-      inherit (pkgs) fetchgit fetchurl fetchFromGitHub dockerTools;
-    };
-
-    runtimeLibs = with pkgs; [
-      libGL libGLU libevent libffi libjpeg libpng libstartup_notification libvpx libwebp
-      stdenv.cc.cc fontconfig libxkbcommon zlib freetype
-      gtk3 libxml2 dbus xcb-util-cursor alsa-lib libpulseaudio pango atk cairo
-      gdk-pixbuf glib udev libva mesa libnotify cups pciutils
-      ffmpeg libglvnd pipewire
-    ] ++ (with pkgs.xorg; [
-      libxcb libX11 libXcursor libXrandr libXi libXext libXcomposite
-      libXdamage libXfixes libXScrnSaver
-    ]);
-
+    forAllSystems = f:
+      nixpkgs.lib.genAttrs systems (system:
+        f {
+          pkgs = import nixpkgs { inherit system; config.allowUnfree = true; };
+          inherit system;
+        }
+      );
   in {
-    packages.${system}.default = pkgs.stdenv.mkDerivation {
-      pname = "zen-browser";
+    packages = forAllSystems ({ pkgs, system, ... }:
+    let
+      # ここで nvfetcher が生成した `_sources/generated.nix` を読み込む
+      zenSrc = import ./_sources/generated.nix {
+        inherit (pkgs) fetchurl fetchgit fetchFromGitHub dockerTools;
+      };
+
+      # nvfetcher の出力例：
+      # zenSrc.zen.src.url
+      # zenSrc.zen.src.sha256
+      # zenSrc.zen.version
       version = zenSrc.zen.version;
 
-      src = zenSrc.zen.src;
-      
-      unpackPhase = ''
-        runHook preUnpack
-        
-        # デフォルトの展開ロジックの介入を防ぎ、
-        # $sourceRoot の自動推測をスキップする
-        unset unpackPhase
-        
-        # 展開先のディレクトリを作成し、そこに tarball の中身を展開する
-        # （これにより、中身の 'zen/' ディレクトリが 'source/zen/' になる）
-        mkdir source
-        tar xf $src -C source
-        
-        # sourceRoot を明示的に設定する (中身の 'zen' ディレクトリのパス)
-        export sourceRoot=source/zen
-        
-        echo "Source root explicitly set to: $sourceRoot"
+      runtimeLibs =
+        (with pkgs; [
+          libGL libGLU libevent libffi libjpeg libpng libstartup_notification
+          libvpx libwebp stdenv.cc.cc fontconfig libxkbcommon zlib freetype
+          gtk3 libxml2 dbus xcb-util-cursor alsa-lib libpulseaudio pango atk
+          cairo gdk-pixbuf glib udev libva mesa libnotify cups pciutils
+          ffmpeg libglvnd pipewire
+        ]) ++ (with pkgs.xorg; [
+          libxcb libX11 libXcursor libXrandr libXi libXext libXcomposite
+          libXdamage libXfixes libXScrnSaver
+        ]);
+    in {
+      default = pkgs.stdenv.mkDerivation {
+        pname = "zen-browser";
+        inherit version;
 
-        runHook postUnpack
-      '';
+        # fetchTarball に置き換える（Zen は tar.xz なので安全）
+        src = builtins.fetchTarball {
+          url = zenSrc.zen.src.url;
+          sha256 = zenSrc.zen.src.sha256;
+        };
 
-      nativeBuildInputs = [
-        pkgs.makeWrapper
-        pkgs.autoPatchelfHook
-      ];
+        desktopSrc = ./.;
 
-      buildInputs = runtimeLibs;
+        # build 系は一切走らせない
+        phases = [ "installPhase" "fixupPhase" ];
 
-      preInstall = ''
-        mkdir -p $out/lib/zen
-        mkdir -p $out/bin
-        mkdir -p $out/share/applications
-        mkdir -p $out/share/icons/hicolor/128x128/apps
-      '';
+        nativeBuildInputs = [
+          pkgs.makeWrapper
+          pkgs.copyDesktopItems
+          pkgs.wrapGAppsHook3
+        ];
 
-      installPhase = ''
-        cp -a . $out/lib/zen/
+        installPhase = ''
+          mkdir -p $out/bin
+          cp -r $src/* $out/bin
 
-        makeWrapper $out/lib/zen/zen $out/bin/zen \
-          --set MOZ_LEGACY_PROFILES 1 \
-          --set MOZ_ALLOW_DOWNGRADE 1 \
-          --set MOZ_APP_LAUNCHER zen \
-          --set LD_LIBRARY_PATH "${pkgs.lib.makeLibraryPath runtimeLibs}"
+          install -D $desktopSrc/zen.desktop \
+            $out/share/applications/zen.desktop
 
-        install -D ./zen.desktop \
-          $out/share/applications/zen.desktop
+          install -D $src/browser/chrome/icons/default/default128.png \
+            $out/share/icons/hicolor/128x128/apps/zen.png
+        '';
 
-        install -D $out/lib/zen/browser/chrome/icons/default/default128.png \
-          $out/share/icons/hicolor/128x128/apps/zen.png || true
-      '';
+        fixupPhase = ''
+          chmod 755 $out/bin/*
 
-      meta = with pkgs.lib; {
-        description = "Zen Browser Release (wrapped binary)";
-        homepage = "https://www.zen-browser.app/";
-        license = licenses.unfree;
-        platforms = [ "x86_64-linux" ];
+          # 必要なバイナリすべてに patchelf + wrap
+          for bin in zen zen-bin glxtest updater vaapitest; do
+            if [ -f "$out/bin/$bin" ]; then
+              echo "Fixing $bin"
+              patchelf --set-interpreter "$(cat $NIX_CC/nix-support/dynamic-linker)" "$out/bin/$bin" || true
+              wrapProgram "$out/bin/$bin" \
+                --set LD_LIBRARY_PATH "${pkgs.lib.makeLibraryPath runtimeLibs}" \
+                --set MOZ_LEGACY_PROFILES 1 \
+                --set MOZ_ALLOW_DOWNGRADE 1 \
+                --set MOZ_APP_LAUNCHER zen \
+                --prefix XDG_DATA_DIRS : "$GSETTINGS_SCHEMAS_PATH"
+            fi
+          done
+        '';
+
+        meta.mainProgram = "zen";
       };
-    };
+    });
 
-    defaultPackage = self.packages.${system}.default;
-
-    devShells.${system}.default = pkgs.mkShell {
-      buildInputs = [ self.packages.${system}.default ];
-    };
+    defaultPackage = self.packages.x86_64-linux.default;
   };
 }
