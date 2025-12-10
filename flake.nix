@@ -34,6 +34,7 @@
       version = zenSrc.zen.version;
 
       src = zenSrc.zen.src;
+      sourceRoot = "zen";
 
       nativeBuildInputs = [
         pkgs.makeWrapper
