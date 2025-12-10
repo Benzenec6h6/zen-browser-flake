@@ -10,7 +10,7 @@
     pkgs = import nixpkgs { inherit system; };
 
     # generated.nix provides: zen.version / zen.src.url / zen.src.sha256
-    zenSrc = import ./generated.nix;
+    zenSrc = import ./_sources/generated.nix;
 
     runtimeLibs = with pkgs; [
       libGL libGLU libevent libffi libjpeg libpng libstartup_notification libvpx libwebp

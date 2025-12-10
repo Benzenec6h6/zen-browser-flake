@@ -26,7 +26,7 @@ jobs:
       # ★ 必須：nvfetcher/shake のゴーストキャッシュを完全消去
       - name: Cleanup old nvfetcher cache
         run: |
-          rm -f generated.nix
+          rm -rf _sources
           rm -rf .shake
           echo "Cache cleaned"
 
@@ -44,7 +44,7 @@ jobs:
       # ★ コミット
       - name: Commit changes
         run: |
-          git add generated.nix flake.lock || true
+          git add _sources flake.lock || true
           if ! git diff --cached --quiet; then
             git commit -m "chore: nvfetcher update" || true
             git push
