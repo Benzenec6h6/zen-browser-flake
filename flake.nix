@@ -35,14 +35,22 @@
 
       src = zenSrc.zen.src;
 
-      nativeBuildInputs = [ pkgs.makeWrapper pkgs.autoPatchelfHook ];
+      nativeBuildInputs = [
+        pkgs.makeWrapper
+        pkgs.autoPatchelfHook
+      ];
+
       buildInputs = runtimeLibs;
 
-      installPhase = ''
+      preInstall = ''
         mkdir -p $out/lib/zen
         mkdir -p $out/bin
+        mkdir -p $out/share/applications
+        mkdir -p $out/share/icons/hicolor/128x128/apps
+      '';
 
-        cp -r $src/* $out/lib/zen/
+      installPhase = ''
+        cp -r $sourceRoot/* $out/lib/zen/
 
         makeWrapper $out/lib/zen/zen $out/bin/zen \
           --set MOZ_LEGACY_PROFILES 1 \
