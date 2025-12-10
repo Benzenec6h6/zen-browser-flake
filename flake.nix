@@ -70,7 +70,7 @@
       '';
 
       installPhase = ''
-        cp -a $sourceRoot/. $out/lib/zen/
+        cp -a . $out/lib/zen/
 
         makeWrapper $out/lib/zen/zen $out/bin/zen \
           --set MOZ_LEGACY_PROFILES 1 \
