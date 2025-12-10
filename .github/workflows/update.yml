@@ -1,52 +1,43 @@
 name: Update Zen Browser
 
-
 on:
-schedule:
-- cron: '0 0 * * *' # once per day (UTC). adjust as desired
-workflow_dispatch: {}
-
+  schedule:
+    - cron: '0 0 * * FRI' # once per day (UTC)
+  workflow_dispatch:
 
 jobs:
-update:
-runs-on: ubuntu-latest
+  update:
+    runs-on: ubuntu-latest
 
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
 
-steps:
-- name: Checkout
-uses: actions/checkout@v4
+      - name: Install Nix (multi-user)
+        uses: cachix/install-nix-action@v27
+        with:
+          nix_path: "nixpkgs=github:NixOS/nixpkgs/nixos-unstable"
 
+      - name: Setup Git (for commits)
+        run: |
+          git config user.name "nvfetcher-bot"
+          git config user.email "nvfetcher-bot@example.com"
 
-- name: Install Nix (multi-user)
-uses: cachix/install-nix-action@v27
-with:
-nix_path: "nixpkgs=github:NixOS/nixpkgs/nixos-unstable"
+      - name: Run nvfetcher
+        run: |
+          nix profile install nixpkgs#nvfetcher
+          nix run nixpkgs#nvfetcher -- --no-auto-update
 
+      - name: Run nix flake update
+        run: |
+          nix flake update || true
 
-- name: Setup Git (for commits)
-run: |
-git config user.name "nvfetcher-bot"
-git config user.email "nvfetcher-bot@example.com"
-
-
-- name: Run nvfetcher
-run: |
-# install nvfetcher via nix and run it
-nix profile install nixpkgs#nvfetcher
-nix run nixpkgs#nvfetcher -- --no-auto-update
-
-
-- name: Run nix flake update
-run: |
-nix flake update || true
-
-
-- name: Commit changes
-run: |
-git add generated.nix flake.lock || true
-if ! git diff --cached --quiet; then
-git commit -m "chore: nvfetcher update" || true
-git push
-else
-echo "No changes"
-fi
+      - name: Commit changes
+        run: |
+          git add generated.nix flake.lock || true
+          if ! git diff --cached --quiet; then
+            git commit -m "chore: nvfetcher update" || true
+            git push
+          else
+            echo "No changes"
+          fi
