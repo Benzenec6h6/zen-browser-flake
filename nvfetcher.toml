@@ -1,4 +1,4 @@
 [zen]
 src.github = "zen-browser/desktop"
-src.filter = "zen\.linux-x86_64\.tar\.xz"
+src.filter = "zen\\.linux-x86_64\\.tar\\.xz"
 fetch.preferTag = true
