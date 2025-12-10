@@ -34,7 +34,26 @@
       version = zenSrc.zen.version;
 
       src = zenSrc.zen.src;
-      sourceRoot = "zen";
+      
+      unpackPhase = ''
+        runHook preUnpack
+        
+        # デフォルトの展開ロジックの介入を防ぎ、
+        # $sourceRoot の自動推測をスキップする
+        unset unpackPhase
+        
+        # 展開先のディレクトリを作成し、そこに tarball の中身を展開する
+        # （これにより、中身の 'zen/' ディレクトリが 'source/zen/' になる）
+        mkdir source
+        tar xf $src -C source
+        
+        # sourceRoot を明示的に設定する (中身の 'zen' ディレクトリのパス)
+        export sourceRoot=source/zen
+        
+        echo "Source root explicitly set to: $sourceRoot"
+        
+        runHook postUnpack
+      '';
 
       nativeBuildInputs = [
         pkgs.makeWrapper
