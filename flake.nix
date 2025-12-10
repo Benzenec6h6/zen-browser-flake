@@ -51,15 +51,6 @@
         export sourceRoot=source/zen
         
         echo "Source root explicitly set to: $sourceRoot"
-        
-        # *** 新しく追加するデバッグコード ***
-        echo "--- Listing files in source/ directory ---"
-        ls -RF source/
-        echo "-----------------------------------------"
-        echo "--- Listing files in source/zen/ directory ---"
-        ls -RF source/zen/
-        echo "----------------------------------------------"
-        # *** デバッグコードここまで ***
 
         runHook postUnpack
       '';
@@ -79,7 +70,7 @@
       '';
 
       installPhase = ''
-        cp -r $sourceRoot/* $out/lib/zen/
+        cp -a $sourceRoot/. $out/lib/zen/
 
         makeWrapper $out/lib/zen/zen $out/bin/zen \
           --set MOZ_LEGACY_PROFILES 1 \
