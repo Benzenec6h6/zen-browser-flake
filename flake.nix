@@ -67,5 +67,5 @@
     devShells.${system}.default = pkgs.mkShell {
       buildInputs = [ self.packages.${system}.default ];
     };
-  }
+  };
 }
