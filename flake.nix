@@ -7,7 +7,10 @@
 
   outputs = { self, nixpkgs }: let
     system = "x86_64-linux";
-    pkgs = import nixpkgs { inherit system; };
+    pkgs = import nixpkgs { 
+      inherit system; 
+      config.allowUnfree = true;
+    };
 
     # generated.nix provides: zen.version / zen.src.url / zen.src.sha256
     zenSrc = import ./_sources/generated.nix {
