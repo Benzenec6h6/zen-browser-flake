@@ -7,12 +7,12 @@
 
   outputs = { self, nixpkgs }: let
     system = "x86_64-linux";
+
     pkgs = import nixpkgs { 
       inherit system; 
       config.allowUnfree = true;
     };
 
-    # generated.nix provides: zen.version / zen.src.url / zen.src.sha256
     zenSrc = import ./_sources/generated.nix {
       inherit (pkgs) fetchgit fetchurl fetchFromGitHub dockerTools;
     };
@@ -33,9 +33,7 @@
       pname = "zen-browser";
       version = zenSrc.zen.version;
 
-      src = pkgs.fetchurl {
-        inherit (zenSrc.zen.src) url sha256;
-      };
+      src = zenSrc.zen.src;
 
       nativeBuildInputs = [ pkgs.makeWrapper pkgs.autoPatchelfHook ];
       buildInputs = runtimeLibs;
