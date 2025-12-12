@@ -1,31 +1,50 @@
 {
-  description = "Zen Browser (nvfetcher integration)";
+  description = "Zen Browser (nvfetcher + wrapped + desktop integration)";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
   };
 
-  outputs = { self, nixpkgs }: let
+  outputs = { self, nixpkgs, ... }: let
     system = "x86_64-linux";
+
     pkgs = import nixpkgs {
       inherit system;
-      config.allowUnfree = true;     # ← ここで unfree を許可
+      config.allowUnfree = true;
     };
 
-    # nvfetcher が生成したソース
+    # nvfetcher の生成物
     zenSrc = import ./_sources/generated.nix {
       inherit (pkgs) fetchurl fetchgit fetchFromGitHub dockerTools;
     };
 
+    runtimeLibs = with pkgs; [
+      libGL libGLU libevent libffi libjpeg libpng libstartup_notification
+      libvpx libwebp stdenv.cc.cc fontconfig libxkbcommon zlib freetype gtk3
+      libxml2 dbus xcb-util-cursor alsa-lib libpulseaudio pango atk cairo
+      gdk-pixbuf glib udev libva mesa libnotify cups pciutils ffmpeg
+      libglvnd pipewire
+    ] ++ (with pkgs.xorg; [
+      libxcb libX11 libXcursor libXrandr libXi libXext
+      libXcomposite libXdamage libXfixes libXScrnSaver
+    ]);
+
   in {
     packages.${system}.default = pkgs.stdenv.mkDerivation {
-      pname = zenSrc.zen.pname;       # "zen"
-      version = zenSrc.zen.version;   # "1.17.12b"
+      pname = zenSrc.zen.pname;
+      version = zenSrc.zen.version;
 
-      # これはすでに fetchurl の結果なのでそのまま使う
       src = zenSrc.zen.src;
+      desktopSrc = ./.;
 
-      phases = [ "unpackPhase" "installPhase" ];
+      phases = [ "unpackPhase" "installPhase" "fixupPhase" ];
+
+      nativeBuildInputs = [
+        pkgs.makeWrapper
+        pkgs.copyDesktopItems
+        pkgs.wrapGAppsHook3
+        pkgs.patchelf
+      ];
 
       unpackPhase = ''
         tar xf $src
@@ -35,17 +54,47 @@
         mkdir -p $out/bin
         mkdir -p $out/lib/zen
 
-        # アーカイブの中身に合わせて適宜修正する
-        cp -r * $out/lib/zen/
+        # Zen Browser 本体コピー
+        cp -r ./* $out/lib/zen/
 
+        # 実行バイナリリンク
         ln -s $out/lib/zen/zen-bin $out/bin/zen
+
+        # .desktop
+        install -Dm644 $desktopSrc/zen.desktop \
+          $out/share/applications/zen.desktop
+
+        # アイコン
+        install -Dm644 \
+          $out/lib/zen/browser/chrome/icons/default/default128.png \
+          $out/share/icons/hicolor/128x128/apps/zen.png
+      '';
+
+      fixupPhase = ''
+        # 必要バイナリに interpreter 設定
+        for bin in zen zen-bin glxtest updater vaapitest; do
+          if [ -f "$out/lib/zen/$bin" ]; then
+            patchelf \
+              --set-interpreter "$(cat $NIX_CC/nix-support/dynamic-linker)" \
+              "$out/lib/zen/$bin"
+          fi
+        done
+
+        # wrap
+        wrapProgram $out/bin/zen \
+          --set LD_LIBRARY_PATH "${pkgs.lib.makeLibraryPath runtimeLibs}" \
+          --set MOZ_LEGACY_PROFILES 1 \
+          --set MOZ_ALLOW_DOWNGRADE 1 \
+          --set MOZ_APP_LAUNCHER zen \
+          --prefix XDG_DATA_DIRS : "$GSETTINGS_SCHEMAS_PATH"
       '';
 
       meta = {
-        description = "Zen Browser packaged via nvfetcher and Nix";
+        description = "Zen Browser packaged with nvfetcher and wrapped properly";
         homepage = "https://github.com/zen-browser/desktop";
-        license = pkgs.lib.licenses.unfree;   # 必須
+        license = pkgs.lib.licenses.unfree;
         platforms = [ "x86_64-linux" ];
+        mainProgram = "zen";
       };
     };
   };
