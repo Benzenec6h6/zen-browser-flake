@@ -41,7 +41,6 @@
 
       nativeBuildInputs = [
         pkgs.makeWrapper
-        pkgs.copyDesktopItems
         pkgs.wrapGAppsHook3
         pkgs.patchelf
       ];
@@ -53,26 +52,29 @@
       installPhase = ''
         mkdir -p $out/bin
         mkdir -p $out/lib/zen
+        mkdir -p $out/share/applications
+        mkdir -p $out/share/icons/hicolor/128x128/apps
 
-        # Zen Browser 本体コピー
+        # Zen Browser 本体
         cp -r ./* $out/lib/zen/
 
-        # 実行バイナリリンク
-        ln -s $out/lib/zen/zen-bin $out/bin/zen
+        # 実行エントリは env-vars
+        chmod +x $out/lib/zen/env-vars
+        ln -s $out/lib/zen/env-vars $out/bin/zen
 
         # .desktop
         install -Dm644 $desktopSrc/zen.desktop \
           $out/share/applications/zen.desktop
 
-        # アイコン
+        # icon
         install -Dm644 \
           $out/lib/zen/browser/chrome/icons/default/default128.png \
           $out/share/icons/hicolor/128x128/apps/zen.png
       '';
 
       fixupPhase = ''
-        # 必要バイナリに interpreter 設定
-        for bin in zen zen-bin glxtest updater vaapitest; do
+        # ELF バイナリに interpreter 設定
+        for bin in zen-bin glxtest updater vaapitest; do
           if [ -f "$out/lib/zen/$bin" ]; then
             patchelf \
               --set-interpreter "$(cat $NIX_CC/nix-support/dynamic-linker)" \
@@ -80,7 +82,7 @@
           fi
         done
 
-        # wrap
+        # env-vars を wrap
         wrapProgram $out/bin/zen \
           --set LD_LIBRARY_PATH "${pkgs.lib.makeLibraryPath runtimeLibs}" \
           --set MOZ_LEGACY_PROFILES 1 \
