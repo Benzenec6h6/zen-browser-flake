@@ -2,7 +2,8 @@
   description = "Zen Browser (nvfetcher + wrapped + desktop integration)";
 
   inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+    #nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+    nixpkgs.url = "https://flakehub.com/f/NixOS/nixpkgs/0.1";
   };
 
   outputs = { self, nixpkgs, ... }: let
@@ -76,7 +77,7 @@
       fixupPhase = ''
         # shebang 修正
         patchShebangs $out/lib/zen/env-vars
-        
+
         # ELF バイナリに interpreter 設定
         for bin in zen-bin glxtest updater vaapitest; do
           if [ -f "$out/lib/zen/$bin" ]; then
