@@ -43,6 +43,7 @@
         pkgs.makeWrapper
         pkgs.wrapGAppsHook3
         pkgs.patchelf
+        pkgs.bash
       ];
 
       unpackPhase = ''
@@ -73,6 +74,9 @@
       '';
 
       fixupPhase = ''
+        # shebang 修正
+        patchShebangs $out/lib/zen/env-vars
+        
         # ELF バイナリに interpreter 設定
         for bin in zen-bin glxtest updater vaapitest; do
           if [ -f "$out/lib/zen/$bin" ]; then
