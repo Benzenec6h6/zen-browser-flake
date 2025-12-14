@@ -53,18 +53,17 @@
       installPhase = ''
         set -eux
 
-        mkdir -p $out/lib/zen
-        cp -r zen/* $out/lib/zen
-
         mkdir -p $out/bin
-        ln -s $out/lib/zen/zen $out/bin/zen
+
+        # unpackPhase で cd source 済み
+        cp -r zen/* $out/bin
 
         install -D \
           $desktopSrc/zen.desktop \
           $out/share/applications/zen.desktop
 
         install -D \
-          $out/lib/zen/browser/chrome/icons/default/default128.png \
+          $out/bin/browser/chrome/icons/default/default128.png \
           $out/share/icons/hicolor/128x128/apps/zen.png
       '';
 
