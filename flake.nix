@@ -37,31 +37,34 @@
       src = zenSrc.zen.src;
       desktopSrc = ./.;
 
-      phases = [ "installPhase" "fixupPhase" ];
+      phases = [ "unpackPhase" "installPhase" "fixupPhase" ];
 
       nativeBuildInputs = [
         pkgs.makeWrapper
-        pkgs.copyDesktopItems
-        pkgs.wrapGAppsHook3
         pkgs.autoPatchelfHook
       ];
 
       buildInputs = runtimeLibs;
 
+      unpackPhase = ''
+        tar -xJf $src
+      '';
+
       installPhase = ''
         set -eux
 
-        mkdir -p $out/bin
+        mkdir -p $out/lib/zen
+        cp -r zen/* $out/lib/zen
 
-        # Zen Browser の実体は必ず zen/ 以下
-        cp -r $src/zen/* $out/bin
+        mkdir -p $out/bin
+        ln -s $out/lib/zen/zen $out/bin/zen
 
         install -D \
           $desktopSrc/zen.desktop \
           $out/share/applications/zen.desktop
 
         install -D \
-          $out/bin/browser/chrome/icons/default/default128.png \
+          $out/lib/zen/browser/chrome/icons/default/default128.png \
           $out/share/icons/hicolor/128x128/apps/zen.png
       '';
 
