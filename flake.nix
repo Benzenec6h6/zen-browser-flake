@@ -37,7 +37,7 @@
       src = zenSrc.zen.src;
       desktopSrc = ./.;
 
-      phases = [ "unpackPhase" "installPhase" "fixupPhase" ];
+      #phases = [ "unpackPhase" "installPhase" "fixupPhase" ];
 
       nativeBuildInputs = [
         pkgs.makeWrapper
@@ -67,7 +67,7 @@
           $out/share/icons/hicolor/128x128/apps/zen.png
       '';
 
-      fixupPhase = ''
+      postFixup = ''
         set -eux
 
         for bin in zen zen-bin glxtest updater vaapitest; do
