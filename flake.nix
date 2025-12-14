@@ -2,7 +2,6 @@
   description = "Zen Browser (nvfetcher + wrapped + desktop integration)";
 
   inputs = {
-    #nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
     nixpkgs.url = "https://flakehub.com/f/NixOS/nixpkgs/0.1";
   };
 
@@ -38,71 +37,46 @@
       src = zenSrc.zen.src;
       desktopSrc = ./.;
 
-      phases = [ "unpackPhase" "installPhase" "fixupPhase" ];
+      phases = [ "installPhase" "fixupPhase" ];
 
       nativeBuildInputs = [
-        pkgs.makeWrapper
+        pkgs.makeWrapper 
+        pkgs.copyDesktopItems 
         pkgs.wrapGAppsHook3
-        pkgs.patchelf
-        pkgs.bash
       ];
 
-      unpackPhase = ''
-        tar xf $src
-      '';
-
       installPhase = ''
-        mkdir -p $out/bin
-        mkdir -p $out/lib/zen
-        mkdir -p $out/share/applications
-        mkdir -p $out/share/icons/hicolor/128x128/apps
-
-        # Zen Browser 本体
-        cp -r ./* $out/lib/zen/
-
-        # 実行エントリは env-vars
-        chmod +x $out/lib/zen/env-vars
-        ln -s $out/lib/zen/env-vars $out/bin/zen
-
-        # .desktop
-        install -Dm644 $desktopSrc/zen.desktop \
-          $out/share/applications/zen.desktop
-
-        # icon
-        install -Dm644 \
-          $out/lib/zen/browser/chrome/icons/default/default128.png \
-          $out/share/icons/hicolor/128x128/apps/zen.png
+        mkdir -p $out/bin && cp -r $src/* $out/bin
+        install -D $desktopSrc/zen.desktop $out/share/applications/zen.desktop
+        install -D $src/browser/chrome/icons/default/default128.png $out/share/icons/hicolor/128x128/apps/zen.png
       '';
 
       fixupPhase = ''
-        # shebang 修正
-        patchShebangs $out/lib/zen/env-vars
-
-        # ELF バイナリに interpreter 設定
-        for bin in zen-bin glxtest updater vaapitest; do
-          if [ -f "$out/lib/zen/$bin" ]; then
-            patchelf \
-              --set-interpreter "$(cat $NIX_CC/nix-support/dynamic-linker)" \
-              "$out/lib/zen/$bin"
-          fi
-        done
-
-        # env-vars を wrap
+        chmod 755 $out/bin/*
+        patchelf --set-interpreter "$(cat $NIX_CC/nix-support/dynamic-linker)" $out/bin/zen
         wrapProgram $out/bin/zen \
-          --set LD_LIBRARY_PATH "${pkgs.lib.makeLibraryPath runtimeLibs}" \
-          --set MOZ_LEGACY_PROFILES 1 \
-          --set MOZ_ALLOW_DOWNGRADE 1 \
-          --set MOZ_APP_LAUNCHER zen \
-          --prefix XDG_DATA_DIRS : "$GSETTINGS_SCHEMAS_PATH"
+                --set LD_LIBRARY_PATH "${pkgs.lib.makeLibraryPath runtimeLibs}" \
+                --set MOZ_LEGACY_PROFILES 1 \
+                --set MOZ_ALLOW_DOWNGRADE 1 \
+                --set MOZ_APP_LAUNCHER zen \
+                --prefix XDG_DATA_DIRS : "$GSETTINGS_SCHEMAS_PATH"
+        patchelf --set-interpreter "$(cat $NIX_CC/nix-support/dynamic-linker)" $out/bin/zen-bin
+        wrapProgram $out/bin/zen-bin \
+                --set LD_LIBRARY_PATH "${pkgs.lib.makeLibraryPath runtimeLibs}" \
+                --set MOZ_LEGACY_PROFILES 1 \
+                --set MOZ_ALLOW_DOWNGRADE 1 \
+                --set MOZ_APP_LAUNCHER zen \
+                --prefix XDG_DATA_DIRS : "$GSETTINGS_SCHEMAS_PATH"
+        patchelf --set-interpreter "$(cat $NIX_CC/nix-support/dynamic-linker)" $out/bin/glxtest
+        wrapProgram $out/bin/glxtest --set LD_LIBRARY_PATH "${pkgs.lib.makeLibraryPath runtimeLibs}"
+        patchelf --set-interpreter "$(cat $NIX_CC/nix-support/dynamic-linker)" $out/bin/updater
+        wrapProgram $out/bin/updater --set LD_LIBRARY_PATH "${pkgs.lib.makeLibraryPath runtimeLibs}"
+        patchelf --set-interpreter "$(cat $NIX_CC/nix-support/dynamic-linker)" $out/bin/vaapitest
+        wrapProgram $out/bin/vaapitest --set LD_LIBRARY_PATH "${pkgs.lib.makeLibraryPath runtimeLibs}"
       '';
 
-      meta = {
-        description = "Zen Browser packaged with nvfetcher and wrapped properly";
-        homepage = "https://github.com/zen-browser/desktop";
-        license = pkgs.lib.licenses.unfree;
-        platforms = [ "x86_64-linux" ];
-        mainProgram = "zen";
-      };
+      meta.mainProgram = "zen";
+
     };
   };
 }
