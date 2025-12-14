@@ -53,9 +53,8 @@
 
         mkdir -p $out/bin
 
-        # tarball のトップディレクトリを自動検出
-        srcdir="$(find "$src" -mindepth 1 -maxdepth 1 -type d | head -n1)"
-        cp -r "$srcdir"/* $out/bin
+        # Zen Browser の実体は必ず zen/ 以下
+        cp -r $src/zen/* $out/bin
 
         install -D \
           $desktopSrc/zen.desktop \
