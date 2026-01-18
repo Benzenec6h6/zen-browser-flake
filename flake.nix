@@ -2,12 +2,13 @@
   description = "Zen Browser (nvfetcher + wrapped + desktop integration)";
 
   inputs = {
-    nixpkgs.url = "https://flakehub.com/f/NixOS/nixpkgs/0.1";
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-25.11";
+    #nixpkgs.url = "https://flakehub.com/f/NixOS/nixpkgs/0.1";
   };
 
   outputs = { self, nixpkgs, ... }:
   let
-    system = "x86_64-linux";
+    systems = [ "x86_64-linux" "aarch64-linux" ];
 
     pkgs = import nixpkgs {
       inherit system;
@@ -36,8 +37,6 @@
 
       src = zenSrc.zen.src;
       desktopSrc = ./.;
-
-      #phases = [ "unpackPhase" "installPhase" "fixupPhase" ];
 
       nativeBuildInputs = [
         pkgs.makeWrapper
