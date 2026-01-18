@@ -3,88 +3,94 @@
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-25.11";
-    #nixpkgs.url = "https://flakehub.com/f/NixOS/nixpkgs/0.1";
   };
 
   outputs = { self, nixpkgs, ... }:
   let
     systems = [ "x86_64-linux" "aarch64-linux" ];
 
-    pkgs = import nixpkgs {
-      inherit system;
-      config.allowUnfree = true;
-    };
-
-    zenSrc = import ./_sources/generated.nix {
-      inherit (pkgs) fetchurl fetchgit fetchFromGitHub dockerTools;
-    };
-
-    runtimeLibs = with pkgs; [
-      libGL libGLU libevent libffi libjpeg libpng libstartup_notification
-      libvpx libwebp stdenv.cc.cc fontconfig libxkbcommon zlib freetype gtk3
-      libxml2 dbus xcb-util-cursor alsa-lib libpulseaudio pango atk cairo
-      gdk-pixbuf glib udev libva mesa libnotify cups pciutils ffmpeg
-      libglvnd pipewire
-    ] ++ (with pkgs.xorg; [
-      libxcb libX11 libXcursor libXrandr libXi libXext
-      libXcomposite libXdamage libXfixes libXScrnSaver
-    ]);
+    forAllSystems = nixpkgs.lib.genAttrs systems;
 
   in {
-    packages.${system}.default = pkgs.stdenv.mkDerivation {
-      pname = zenSrc.zen.pname;
-      version = zenSrc.zen.version;
+    packages = forAllSystems (system:
+      let
+        pkgs = import nixpkgs {
+          inherit system;
+          config.allowUnfree = true;
+        };
 
-      src = zenSrc.zen.src;
-      desktopSrc = ./.;
+        zenSrc = import ./_sources/generated.nix {
+          inherit (pkgs)
+            fetchurl fetchgit fetchFromGitHub dockerTools;
+        };
 
-      nativeBuildInputs = [
-        pkgs.makeWrapper
-        pkgs.autoPatchelfHook
-      ];
+        runtimeLibs = with pkgs; [
+          libGL libGLU libevent libffi libjpeg libpng
+          libstartup_notification libvpx libwebp
+          stdenv.cc.cc fontconfig libxkbcommon zlib
+          freetype gtk3 libxml2 dbus xcb-util-cursor
+          alsa-lib libpulseaudio pango atk cairo
+          gdk-pixbuf glib udev libva mesa libnotify
+          cups pciutils ffmpeg libglvnd pipewire
+        ] ++ (with pkgs.xorg; [
+          libxcb libX11 libXcursor libXrandr libXi
+          libXext libXcomposite libXdamage
+          libXfixes libXScrnSaver
+        ]);
+      in {
+        default = pkgs.stdenv.mkDerivation {
+          pname = zenSrc.zen.pname;
+          version = zenSrc.zen.version;
 
-      buildInputs = runtimeLibs;
+          src = zenSrc.zen.src;
+          desktopSrc = ./.;
 
-      unpackPhase = ''
-        tar -xJf $src
-      '';
+          nativeBuildInputs = [
+            pkgs.makeWrapper
+            pkgs.autoPatchelfHook
+          ];
 
-      installPhase = ''
-        set -eux
+          buildInputs = runtimeLibs;
 
-        mkdir -p $out/bin
+          unpackPhase = ''
+            tar -xJf $src
+          '';
 
-        # unpackPhase で cd source 済み
-        cp -r zen/* $out/bin
+          installPhase = ''
+            set -eux
 
-        install -D \
-          $desktopSrc/zen.desktop \
-          $out/share/applications/zen.desktop
+            mkdir -p $out/bin
+            cp -r zen/* $out/bin
 
-        install -D \
-          $out/bin/browser/chrome/icons/default/default128.png \
-          $out/share/icons/hicolor/128x128/apps/zen.png
-      '';
+            install -D \
+              $desktopSrc/zen.desktop \
+              $out/share/applications/zen.desktop
 
-      postFixup = ''
-        set -eux
+            install -D \
+              $out/bin/browser/chrome/icons/default/default128.png \
+              $out/share/icons/hicolor/128x128/apps/zen.png
+          '';
 
-        for bin in zen zen-bin glxtest updater vaapitest; do
-          if [ -f "$out/bin/$bin" ]; then
-            chmod +x "$out/bin/$bin"
-            wrapProgram "$out/bin/$bin" \
-              --set MOZ_LEGACY_PROFILES 1 \
-              --set MOZ_ALLOW_DOWNGRADE 1 \
-              --set MOZ_APP_LAUNCHER zen \
-              --prefix XDG_DATA_DIRS : "$GSETTINGS_SCHEMAS_PATH"
-          fi
-        done
-      '';
+          postFixup = ''
+            set -eux
+            for bin in zen zen-bin glxtest updater vaapitest; do
+              if [ -f "$out/bin/$bin" ]; then
+                chmod +x "$out/bin/$bin"
+                wrapProgram "$out/bin/$bin" \
+                  --set MOZ_LEGACY_PROFILES 1 \
+                  --set MOZ_ALLOW_DOWNGRADE 1 \
+                  --set MOZ_APP_LAUNCHER zen \
+                  --prefix XDG_DATA_DIRS : "$GSETTINGS_SCHEMAS_PATH"
+              fi
+            done
+          '';
 
-      meta = {
-        mainProgram = "zen";
-        platforms = [ "x86_64-linux" ];
-      };
-    };
+          meta = {
+            mainProgram = "zen";
+            platforms = [ system ];
+          };
+        };
+      }
+    );
   };
 }
