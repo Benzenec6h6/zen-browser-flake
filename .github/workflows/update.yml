@@ -2,7 +2,7 @@ name: Update Zen Browser
 
 on:
   schedule:
-    - cron: '0 0 * * FRI'
+    - cron: '0 0 * * 1,3,5'
   workflow_dispatch:
 
 jobs:
