@@ -32,6 +32,7 @@
           alsa-lib libpulseaudio pango atk cairo
           gdk-pixbuf glib udev libva mesa libnotify
           cups pciutils ffmpeg libglvnd pipewire
+          ffmpeg_7-full libmpris nss nspr
         ] ++ (with pkgs.xorg; [
           libxcb libX11 libXcursor libXrandr libXi
           libXext libXcomposite libXdamage
@@ -73,6 +74,9 @@
 
           postFixup = ''
             set -eux
+            # ライブラリパスを構築
+            libPath="${pkgs.lib.makeLibraryPath runtimeLibs}"
+            
             for bin in zen zen-bin glxtest updater vaapitest; do
               if [ -f "$out/bin/$bin" ]; then
                 chmod +x "$out/bin/$bin"
@@ -80,7 +84,9 @@
                   --set MOZ_LEGACY_PROFILES 1 \
                   --set MOZ_ALLOW_DOWNGRADE 1 \
                   --set MOZ_APP_LAUNCHER zen \
-                  --prefix XDG_DATA_DIRS : "$GSETTINGS_SCHEMAS_PATH"
+                  --prefix LD_LIBRARY_PATH : "$libPath" \
+                  --prefix XDG_DATA_DIRS : "$GSETTINGS_SCHEMAS_PATH" \
+                  --suffix PATH : "${pkgs.lib.makeBinPath [ pkgs.ffmpeg_7-full ]}"
               fi
             done
           '';
