@@ -8,10 +8,10 @@
 {
   zen = {
     pname = "zen";
-    version = "1.18.2b";
+    version = "1.18.3b";
     src = fetchurl {
-      url = "https://github.com/zen-browser/desktop/releases/download/1.18.2b/zen.linux-x86_64.tar.xz";
-      sha256 = "sha256-f/d9lgznyKGacXbywHbQ9rA384tgX8k6chmege2hpfU=";
+      url = "https://github.com/zen-browser/desktop/releases/download/1.18.3b/zen.linux-x86_64.tar.xz";
+      sha256 = "sha256-UpAIl7QZY3A1BzBjAJXi0iopzZlgZ2cslb4rwsdJZFY=";
     };
   };
 }
