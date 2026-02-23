@@ -31,7 +31,7 @@
           freetype gtk3 libxml2 dbus xcb-util-cursor
           alsa-lib libpulseaudio pango atk cairo
           gdk-pixbuf glib udev libva mesa libnotify
-          cups pciutils ffmpeg libglvnd pipewire
+          cups pciutils libglvnd pipewire
           ffmpeg_7-full nss nspr
         ] ++ (with pkgs.xorg; [
           libxcb libX11 libXcursor libXrandr libXi
