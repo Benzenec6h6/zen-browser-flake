@@ -74,7 +74,6 @@
 
           postFixup = ''
             set -eux
-            # ライブラリパスを構築
             libPath="${pkgs.lib.makeLibraryPath runtimeLibs}"
 
             for bin in zen zen-bin glxtest updater vaapitest; do
@@ -84,9 +83,7 @@
                   --set MOZ_LEGACY_PROFILES 1 \
                   --set MOZ_ALLOW_DOWNGRADE 1 \
                   --set MOZ_APP_LAUNCHER zen \
-                  --prefix LD_LIBRARY_PATH : "$libPath:/run/opengl-driver/lib" \
-                  --prefix LIBVA_DRIVERS_PATH : "/run/opengl-driver/lib/dri" \
-                  --set MOZ_DISABLE_RDD_SANDBOX 1 \
+                  --prefix LD_LIBRARY_PATH : "$libPath" \
                   --prefix XDG_DATA_DIRS : "$GSETTINGS_SCHEMAS_PATH"
               fi
             done
