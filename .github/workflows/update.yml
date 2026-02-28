@@ -5,6 +5,11 @@ on:
     - cron: '0 0 * * 1,3,5'
   workflow_dispatch:
 
+  push:
+    paths:
+      - "flake.nix"
+      - "nvfetcher.toml"
+
 jobs:
   update:
     runs-on: ubuntu-latest
