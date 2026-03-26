@@ -91,7 +91,7 @@
 
           meta = {
             mainProgram = "zen";
-            platforms = [ system ];
+            platforms = pkgs.lib.platforms.linux;
           };
         };
       }
