@@ -2,42 +2,86 @@
   description = "Zen Browser (nvfetcher + wrapped + desktop integration)";
 
   inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs/nixos-25.11";
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
   };
 
-  outputs = { self, nixpkgs, ... }:
-  let
-    systems = [ "x86_64-linux" "aarch64-linux" ];
+  outputs = {
+    self,
+    nixpkgs,
+    ...
+  }: let
+    systems = ["x86_64-linux" "aarch64-linux"];
 
     forAllSystems = nixpkgs.lib.genAttrs systems;
-
   in {
-    packages = forAllSystems (system:
-      let
+    packages = forAllSystems (
+      system: let
         pkgs = import nixpkgs {
-          localSystem=system;
+          localSystem = system;
           config.allowUnfree = true;
         };
 
         zenSrc = import ./_sources/generated.nix {
-          inherit (pkgs)
-            fetchurl fetchgit fetchFromGitHub dockerTools;
+          inherit
+            (pkgs)
+            fetchurl
+            fetchgit
+            fetchFromGitHub
+            dockerTools
+            ;
         };
 
-        runtimeLibs = with pkgs; [
-          libGL libGLU libevent libffi libjpeg libpng
-          libstartup_notification libvpx libwebp
-          stdenv.cc.cc fontconfig libxkbcommon zlib
-          freetype gtk3 libxml2 dbus xcb-util-cursor
-          alsa-lib libpulseaudio pango atk cairo
-          gdk-pixbuf glib udev libva mesa libnotify
-          cups pciutils libglvnd pipewire
-          ffmpeg_7-full nss nspr
-        ] ++ (with pkgs.xorg; [
-          libxcb libX11 libXcursor libXrandr libXi
-          libXext libXcomposite libXdamage
-          libXfixes libXScrnSaver
-        ]);
+        runtimeLibs = with pkgs;
+          [
+            libGL
+            libGLU
+            libevent
+            libffi
+            libjpeg
+            libpng
+            libstartup_notification
+            libvpx
+            libwebp
+            stdenv.cc.cc
+            fontconfig
+            libxkbcommon
+            zlib
+            freetype
+            gtk3
+            libxml2
+            dbus
+            xcb-util-cursor
+            alsa-lib
+            libpulseaudio
+            pango
+            atk
+            cairo
+            gdk-pixbuf
+            glib
+            udev
+            libva
+            mesa
+            libnotify
+            cups
+            pciutils
+            libglvnd
+            pipewire
+            ffmpeg_7-full
+            nss
+            nspr
+          ]
+          ++ (with pkgs.xorg; [
+            libxcb
+            libX11
+            libXcursor
+            libXrandr
+            libXi
+            libXext
+            libXcomposite
+            libXdamage
+            libXfixes
+            libXScrnSaver
+          ]);
       in {
         default = pkgs.stdenv.mkDerivation {
           pname = zenSrc.zen.pname;
